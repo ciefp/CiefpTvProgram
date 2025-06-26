@@ -1,17 +1,17 @@
 #!/bin/bash
-##setup command=wget -q "--no-check-certificate" https://raw.githubusercontent.com/ciefp/CiefpSettingsStreamrelay/main/installer.sh -O - | /bin/sh
+##setup command=wget -q "--no-check-certificate" https://raw.githubusercontent.com/ciefp/CiefpTvProgram/main/installer.sh -O - | /bin/sh
 
 ######### Only This 2 lines to edit with new version ######
 version='1.1'
 changelog='\nFix little bugs\nUpdated Picons List'
 ##############################################################
 
-TMPPATH=/tmp/CiefpSettingsStreamrelay
+TMPPATH=/tmp/CiefpTvProgram
 
 if [ ! -d /usr/lib64 ]; then
-	PLUGINPATH=/usr/lib/enigma2/python/Plugins/Extensions/CiefpSettingsStreamrelay
+	PLUGINPATH=/usr/lib/enigma2/python/Plugins/Extensions/CiefpTvProgram
 else
-	PLUGINPATH=/usr/lib64/enigma2/python/Plugins/Extensions/CiefpSettingsStreamrelay
+	PLUGINPATH=/usr/lib64/enigma2/python/Plugins/Extensions/CiefpTvProgram
 fi
 
 # check depends packges
@@ -77,9 +77,9 @@ else
    echo ""
    echo ""
 fi
-   wget https://github.com/ciefp/CiefpSettingsStreamrelay/archive/refs/heads/main.tar.gz
+   wget https://github.com/ciefp/CiefpTvProgram/archive/refs/heads/main.tar.gz
    tar -xzf main.tar.gz
-   cp -r 'CiefpSettingsStreamrelay-main/usr' '/'
+   cp -r 'CiefpTvProgram-main/usr' '/'
 set +e
 cd
 sleep 2
@@ -95,7 +95,7 @@ sync
 echo ""
 echo ""
 echo "#########################################################"
-echo "#    CiefpSettingsStreamrelay INSTALLED SUCCESSFULLY    #"
+echo "#    CiefpTvProgram INSTALLED SUCCESSFULLY    #"
 echo "#                  developed by ciefp                   #"
 echo "#                   Big thanks Qu4k3                    #"
 echo "#                  .::ciefpsettings::.                  #"
