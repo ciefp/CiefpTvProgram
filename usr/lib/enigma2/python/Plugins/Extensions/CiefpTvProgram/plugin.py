@@ -37,6 +37,7 @@ PICON_PATH = os.path.join(PLUGIN_PATH, "picon/")  # Picon directory
 PLACEHOLDER_PICON = os.path.join(PICON_PATH, "placeholder.png")  # Placeholder picon
 EPG_DIR = "/tmp/CiefpTvProgram"  # EPG storage directory
 EPGIMPORT_FILE = "/etc/epgimport/rytecSRB_Basic.xml"
+LAST_UPDATE_FILE = os.path.join(EPG_DIR, "last_update.txt")  # File to track last update
 
 # Channel list based on lista.txt (no service references needed)
 CHANNEL_LIST_DATA = [
@@ -241,7 +242,6 @@ class CiefpTvProgram(Screen):
         self["backgroundLogo"] = Pixmap()
         self["sideBackground"] = Pixmap()
 
-
         self["actions"] = ActionMap(["OkCancelActions", "DirectionActions"],
             {
                 "ok": self.switchView,
@@ -444,13 +444,58 @@ class CiefpTvProgram(Screen):
             except Exception as e:
                 logger.error(f"Error setting side background: {str(e)}")
 
+    def checkLastUpdate(self):
+        """Check if the last update was more than 2 days ago."""
+        if not os.path.exists(LAST_UPDATE_FILE):
+            logger.debug(f"No last update file found: {LAST_UPDATE_FILE}")
+            return True  # No update file, force update
+        try:
+            with open(LAST_UPDATE_FILE, 'r') as f:
+                last_update_str = f.read().strip()
+            last_update = datetime.datetime.strptime(last_update_str, '%Y-%m-%d')
+            days_since_update = (datetime.datetime.now() - last_update).days
+            logger.debug(f"Last update was {days_since_update} days ago on {last_update_str}")
+            return days_since_update >= 2  # Update if 2 or more days have passed
+        except Exception as e:
+            logger.error(f"Error reading last update file {LAST_UPDATE_FILE}: {str(e)}")
+            return True  # If error, force update
+
+    def updateLastUpdateFile(self):
+        """Update the last_update.txt file with the current date."""
+        try:
+            # Delete old last_update file if it exists
+            if os.path.exists(LAST_UPDATE_FILE):
+                os.remove(LAST_UPDATE_FILE)
+                logger.debug(f"Removed old last update file: {LAST_UPDATE_FILE}")
+            # Create new last_update file with current date
+            current_date = datetime.datetime.now().strftime('%Y-%m-%d')
+            with open(LAST_UPDATE_FILE, 'w') as f:
+                f.write(current_date)
+            logger.debug(f"Created new last update file: {LAST_UPDATE_FILE} with date {current_date}")
+        except Exception as e:
+            logger.error(f"Error updating last update file {LAST_UPDATE_FILE}: {str(e)}")
+
     def downloadAndParseEPG(self):
         try:
+            # Check if EPGImport file exists
             if os.path.exists(EPGIMPORT_FILE):
                 logger.debug(f"Using EPGImport file: {EPGIMPORT_FILE}")
                 self.parseEPG(EPGIMPORT_FILE)
                 return
 
+            # Check if update is needed based on last_update.txt
+            if not self.checkLastUpdate():
+                logger.debug("No update needed based on last_update.txt")
+                # Load cached EPG files
+                channel_ids = {chan_id for chan_id, chan_name in CHANNEL_ID_MAPPING.items() if chan_name in CHANNEL_LIST_DATA}
+                for chan_id in channel_ids:
+                    epg_file = os.path.join(EPG_DIR, f"{chan_id}.xml")
+                    if os.path.exists(epg_file):
+                        logger.debug(f"Parsing cached EPG file: {epg_file}")
+                        self.parseEPG(epg_file)
+                return
+
+            # Proceed with downloading new EPG data
             channel_ids = {chan_id for chan_id, chan_name in CHANNEL_ID_MAPPING.items() if chan_name in CHANNEL_LIST_DATA}
             for chan_id in channel_ids:
                 url = EPG_URLS.get(chan_id)
@@ -458,9 +503,6 @@ class CiefpTvProgram(Screen):
                     logger.debug(f"No EPG URL for channel ID: {chan_id}")
                     continue
                 epg_file = os.path.join(EPG_DIR, f"{chan_id}.xml")
-                if os.path.exists(epg_file):
-                    logger.debug(f"Using cached EPG for {chan_id}: {epg_file}")
-                    continue
                 logger.debug(f"Downloading EPG for {chan_id} from {url}")
                 temp_file = os.path.join(EPG_DIR, f"{chan_id}.xml.gz")
                 urllib.request.urlretrieve(url, temp_file)
@@ -471,11 +513,15 @@ class CiefpTvProgram(Screen):
                 logger.debug(f"Decompressed EPG saved to: {epg_file}")
                 os.remove(temp_file)
 
+            # Parse all downloaded EPG files
             for chan_id in channel_ids:
                 epg_file = os.path.join(EPG_DIR, f"{chan_id}.xml")
                 if os.path.exists(epg_file):
                     logger.debug(f"Parsing EPG file: {epg_file}")
                     self.parseEPG(epg_file)
+
+            # Update the last_update.txt file after successful download and parse
+            self.updateLastUpdateFile()
         except Exception as e:
             logger.error(f"EPG download or decompression error: {str(e)}")
             self["epgInfo"].setList([f"Greška pri preuzimanju EPG-a: {str(e)}"])
@@ -596,7 +642,7 @@ def main(session, **kwargs):
 def Plugins(**kwargs):
     return PluginDescriptor(
         name="CiefpTvProgram",
-        description="Tv Program Prikaz EPG-a v1.0",
+        description="Tv Program Prikaz EPG-a v1.1",
         where=[PluginDescriptor.WHERE_PLUGINMENU, PluginDescriptor.WHERE_EXTENSIONSMENU],
         icon="icon.png",
         fnc=main
