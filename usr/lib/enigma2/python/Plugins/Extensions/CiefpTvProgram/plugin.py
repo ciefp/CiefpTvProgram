@@ -221,7 +221,7 @@ CHANNEL_ID_MAPPING = {
 
 class CiefpTvProgram(Screen):
     skin = """
-        <screen name="CiefpTvProgram" position="center,center" size="1800,800" title="..:: CiefpTvProgram v1.1 za prikaz EPG-a ::..">
+        <screen name="CiefpTvProgram" position="center,center" size="1800,800" title="..:: CiefpTvProgram v1.2 za prikaz EPG-a ::..">
             <widget name="channelList" position="0,0" size="350,668" scrollbarMode="showAlways" itemHeight="33" font="Regular;28" />
             <widget name="epgInfo" position="370,0" size="1000,668" scrollbarMode="showAlways" itemHeight="33" font="Regular;28" />
             <widget name="sideBackground" position="1380,0" size="420,668" alphatest="on" />
