@@ -308,13 +308,8 @@ class CiefpTvProgram(Screen):
         current = self["channelList"].getCurrent()
         if current:
             channel_name = current
-            epg = self.getEPGFromXML(channel_name)
-            if isinstance(epg, list) and len(epg) == 1 and epg[0].startswith("Nema EPG"):
-                logger.debug(f"No EPG data for {channel_name}, setting error message")
-                self["epgInfo"].setList(epg)
-            else:
-                logger.debug(f"Setting EPG data for {channel_name}, {len(epg)} entries")
-                self["epgInfo"].setList(epg)
+            self.prepareEPGContent()  # Prepare EPG content with current program index
+            self.showEPGContent()  # Show EPG content and scroll to current program
             self.loadPicon(channel_name)
             logger.debug(f"Updated EPG and picon for channel: {channel_name}")
 
@@ -642,7 +637,7 @@ def main(session, **kwargs):
 def Plugins(**kwargs):
     return PluginDescriptor(
         name="CiefpTvProgram",
-        description="Tv Program Prikaz EPG-a v1.1",
+        description="Tv Program Prikaz EPG-a v1.2",
         where=[PluginDescriptor.WHERE_PLUGINMENU, PluginDescriptor.WHERE_EXTENSIONSMENU],
         icon="icon.png",
         fnc=main
