@@ -221,7 +221,7 @@ CHANNEL_ID_MAPPING = {
 
 class CiefpTvProgram(Screen):
     skin = """
-        <screen name="CiefpTvProgram" position="center,center" size="1800,800" title="..:: CiefpTvProgram v1.2 za prikaz EPG-a ::..">
+        <screen name="CiefpTvProgram" position="center,center" size="1800,800" title="..:: CiefpTvProgram v1.3 za prikaz EPG-a ::..">
             <widget name="channelList" position="0,0" size="350,668" scrollbarMode="showAlways" itemHeight="33" font="Regular;28" />
             <widget name="epgInfo" position="370,0" size="1000,668" scrollbarMode="showAlways" itemHeight="33" font="Regular;28" />
             <widget name="sideBackground" position="1380,0" size="420,668" alphatest="on" />
@@ -482,7 +482,8 @@ class CiefpTvProgram(Screen):
             if not self.checkLastUpdate():
                 logger.debug("No update needed based on last_update.txt")
                 # Load cached EPG files
-                channel_ids = {chan_id for chan_id, chan_name in CHANNEL_ID_MAPPING.items() if chan_name in CHANNEL_LIST_DATA}
+                channel_ids = {chan_id for chan_id, chan_name in CHANNEL_ID_MAPPING.items() if
+                               chan_name in CHANNEL_LIST_DATA}
                 for chan_id in channel_ids:
                     epg_file = os.path.join(EPG_DIR, f"{chan_id}.xml")
                     if os.path.exists(epg_file):
@@ -490,35 +491,49 @@ class CiefpTvProgram(Screen):
                         self.parseEPG(epg_file)
                 return
 
-            # Proceed with downloading new EPG data
-            channel_ids = {chan_id for chan_id, chan_name in CHANNEL_ID_MAPPING.items() if chan_name in CHANNEL_LIST_DATA}
+            # Proceed with downloading new EPG data per channel with error handling
+            channel_ids = {chan_id for chan_id, chan_name in CHANNEL_ID_MAPPING.items() if
+                           chan_name in CHANNEL_LIST_DATA}
             for chan_id in channel_ids:
                 url = EPG_URLS.get(chan_id)
                 if not url:
                     logger.debug(f"No EPG URL for channel ID: {chan_id}")
                     continue
                 epg_file = os.path.join(EPG_DIR, f"{chan_id}.xml")
-                logger.debug(f"Downloading EPG for {chan_id} from {url}")
                 temp_file = os.path.join(EPG_DIR, f"{chan_id}.xml.gz")
-                urllib.request.urlretrieve(url, temp_file)
-                logger.debug(f"Decompressing EPG for {chan_id}: {temp_file}")
-                with gzip.open(temp_file, 'rb') as f_in:
-                    with open(epg_file, 'wb') as f_out:
-                        f_out.write(f_in.read())
-                logger.debug(f"Decompressed EPG saved to: {epg_file}")
-                os.remove(temp_file)
+                try:
+                    logger.debug(f"Downloading EPG for {chan_id} from {url}")
+                    urllib.request.urlretrieve(url, temp_file)
+                    try:
+                        logger.debug(f"Decompressing EPG for {chan_id}: {temp_file}")
+                        with gzip.open(temp_file, 'rb') as f_in:
+                            with open(epg_file, 'wb') as f_out:
+                                f_out.write(f_in.read())
+                    except (gzip.BadGzipFile, OSError) as gz_err:
+                        # Fallback if not actually gzipped
+                        logger.debug(f"Not a gzipped file for {chan_id}, using as-is: {str(gz_err)}")
+                        os.rename(temp_file, epg_file)
+                    finally:
+                        if os.path.exists(temp_file):
+                            os.remove(temp_file)
+                    logger.debug(f"EPG saved to: {epg_file}")
+                except Exception as e:
+                    logger.error(f"Error downloading or processing for {chan_id}: {str(e)}")
+                    if os.path.exists(temp_file):
+                        os.remove(temp_file)
+                    continue  # Skip to next channel
 
-            # Parse all downloaded EPG files
+            # Parse all downloaded or cached EPG files
             for chan_id in channel_ids:
                 epg_file = os.path.join(EPG_DIR, f"{chan_id}.xml")
                 if os.path.exists(epg_file):
                     logger.debug(f"Parsing EPG file: {epg_file}")
                     self.parseEPG(epg_file)
 
-            # Update the last_update.txt file after successful download and parse
+            # Update the last_update.txt file after successful process
             self.updateLastUpdateFile()
         except Exception as e:
-            logger.error(f"EPG download or decompression error: {str(e)}")
+            logger.error(f"General EPG processing error: {str(e)}")
             self["epgInfo"].setList([f"Greška pri preuzimanju EPG-a: {str(e)}"])
 
     def parseEPG(self, epg_file):
@@ -637,7 +652,7 @@ def main(session, **kwargs):
 def Plugins(**kwargs):
     return PluginDescriptor(
         name="CiefpTvProgram",
-        description="Tv Program Prikaz EPG-a v1.2",
+        description="Tv Program Prikaz EPG-a v1.3",
         where=[PluginDescriptor.WHERE_PLUGINMENU, PluginDescriptor.WHERE_EXTENSIONSMENU],
         icon="icon.png",
         fnc=main
