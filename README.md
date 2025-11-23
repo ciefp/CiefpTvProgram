@@ -8,7 +8,7 @@
 ![Bouquet](https://github.com/ciefp/CiefpTvProgram/blob/main/ciefptvprogram.jpg)
 
 # Description:
-- **CiefpTvProgram is a simple and functional Enigma2 plugin that allows you to browse the Electronic Program Guide (EPG) for a list of selected TV channels. **
+- **CiefpTvProgram is a simple and functional Enigma2 plugin that allows you to browse the Electronic Program Guide (EPG) for a list of selected TV channels.**
 - **The channel list is displayed on the left, and detailed EPG information appears on the right, including show titles, start times, and descriptions.**
 
 # Features:
